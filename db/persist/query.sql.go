@@ -6,28 +6,193 @@ package persist
 import (
 	"context"
 	"database/sql"
+	"time"
 )
+
+const getCatalog = `-- name: GetCatalog :one
+SELECT id, category, brand, color, pattern, title, description, price, last_activity FROM CATALOG WHERE id=$1
+`
+
+func (q *Queries) GetCatalog(ctx context.Context, id string) (Catalog, error) {
+	row := q.db.QueryRowContext(ctx, getCatalog, id)
+	var i Catalog
+	err := row.Scan(
+		&i.ID,
+		&i.Category,
+		&i.Brand,
+		&i.Color,
+		&i.Pattern,
+		&i.Title,
+		&i.Description,
+		&i.Price,
+		&i.LastActivity,
+	)
+	return i, err
+}
+
+const listCatalog = `-- name: ListCatalog :many
+SELECT id, category, brand, color, pattern, title, description, price, last_activity FROM CATALOG ORDER BY last_activity DESC
+`
+
+func (q *Queries) ListCatalog(ctx context.Context) ([]Catalog, error) {
+	rows, err := q.db.QueryContext(ctx, listCatalog)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Catalog
+	for rows.Next() {
+		var i Catalog
+		if err := rows.Scan(
+			&i.ID,
+			&i.Category,
+			&i.Brand,
+			&i.Color,
+			&i.Pattern,
+			&i.Title,
+			&i.Description,
+			&i.Price,
+			&i.LastActivity,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsage = `-- name: ListUsage :many
+SELECT id, c_id, ts FROM ACTIVITY ORDER BY ts DESC
+`
+
+func (q *Queries) ListUsage(ctx context.Context) ([]Activity, error) {
+	rows, err := q.db.QueryContext(ctx, listUsage)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Activity
+	for rows.Next() {
+		var i Activity
+		if err := rows.Scan(&i.ID, &i.CID, &i.Ts); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const logUsage = `-- name: LogUsage :execresult
+INSERT INTO ACTIVITY(id, c_id, ts) values ($1, $2, $3)
+`
+
+type LogUsageParams struct {
+	ID  string
+	CID string
+	Ts  time.Time
+}
+
+func (q *Queries) LogUsage(ctx context.Context, arg LogUsageParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, logUsage, arg.ID, arg.CID, arg.Ts)
+}
 
 const putItem = `-- name: PutItem :execresult
 INSERT INTO catalog
-(id, img, title, description)
-VALUES ($1, $2, $3, $4)
+(id, category, brand, color, pattern, title, description, price, last_activity)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 ON CONFLICT (id) DO UPDATE
-SET img = $2, title = $3, description = $4
+SET category=$2, brand=$3, color=$4, pattern=$5, title=$6, description=$7, price=$8, last_activity=$9
 `
 
 type PutItemParams struct {
-	ID          string
-	Img         []byte
-	Title       sql.NullString
-	Description sql.NullString
+	ID           string
+	Category     sql.NullString
+	Brand        sql.NullString
+	Color        sql.NullString
+	Pattern      sql.NullString
+	Title        sql.NullString
+	Description  sql.NullString
+	Price        sql.NullFloat64
+	LastActivity sql.NullTime
 }
 
 func (q *Queries) PutItem(ctx context.Context, arg PutItemParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, putItem,
 		arg.ID,
-		arg.Img,
+		arg.Category,
+		arg.Brand,
+		arg.Color,
+		arg.Pattern,
 		arg.Title,
 		arg.Description,
+		arg.Price,
+		arg.LastActivity,
 	)
+}
+
+const searchCatalog = `-- name: SearchCatalog :many
+SELECT id, category, brand, color, pattern, title, description, price, last_activity FROM CATALOG WHERE LOWER(title) LIKE '%' || LOWER($1) || '%'
+	OR LOWER(description) LIKE '%' || LOWER($1) || '%'
+	OR LOWER(color) LIKE '%' || LOWER($1) || '%'
+	OR LOWER(category) LIKE '%' || LOWER($1) || '%'
+	OR LOWER(brand) LIKE '%' || LOWER($1) || '%'
+	OR LOWER(pattern) LIKE '%' || LOWER($1) || '%'
+`
+
+func (q *Queries) SearchCatalog(ctx context.Context, lower string) ([]Catalog, error) {
+	rows, err := q.db.QueryContext(ctx, searchCatalog, lower)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Catalog
+	for rows.Next() {
+		var i Catalog
+		if err := rows.Scan(
+			&i.ID,
+			&i.Category,
+			&i.Brand,
+			&i.Color,
+			&i.Pattern,
+			&i.Title,
+			&i.Description,
+			&i.Price,
+			&i.LastActivity,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateLastUsed = `-- name: UpdateLastUsed :execresult
+UPDATE catalog SET last_activity=$1 WHERE id=$2
+`
+
+type UpdateLastUsedParams struct {
+	LastActivity sql.NullTime
+	ID           string
+}
+
+func (q *Queries) UpdateLastUsed(ctx context.Context, arg UpdateLastUsedParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, updateLastUsed, arg.LastActivity, arg.ID)
 }

@@ -4,17 +4,23 @@ package persist
 
 import (
 	"database/sql"
+	"time"
 )
 
 type Activity struct {
 	ID  string
-	CID sql.NullString
-	Ts  sql.NullTime
+	CID string
+	Ts  time.Time
 }
 
 type Catalog struct {
-	ID          string
-	Img         []byte
-	Title       sql.NullString
-	Description sql.NullString
+	ID           string
+	Category     sql.NullString
+	Brand        sql.NullString
+	Color        sql.NullString
+	Pattern      sql.NullString
+	Title        sql.NullString
+	Description  sql.NullString
+	Price        sql.NullFloat64
+	LastActivity sql.NullTime
 }

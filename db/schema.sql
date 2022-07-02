@@ -1,14 +1,19 @@
 CREATE TABLE IF NOT EXISTS CATALOG
 (
-	id NCHAR(64) NOT NULL PRIMARY KEY,
-	img BLOB,
+	id NCHAR(36) NOT NULL PRIMARY KEY,
+	category NCHAR(64),
+	brand NCHAR(64),
+	color NCHAR(64),
+	pattern NCHAR(64),
 	title text,
-	description text
+	description text,
+	price real,
+	last_activity timestamp
 );
 
 CREATE TABLE IF NOT EXISTS ACTIVITY
 (
-	id NCHAR(34) NOT NULL PRIMARY KEY,
-	c_id NCHAR(64) references catalog(id),
-	ts timestamp
+	id NCHAR(36) NOT NULL PRIMARY KEY,
+	c_id NCHAR(36) references catalog(id) NOT NULL,
+	ts timestamp NOT NULL
 );

@@ -1,6 +1,30 @@
 -- name: PutItem :execresult
 INSERT INTO catalog
-(id, img, title, description)
-VALUES ($1, $2, $3, $4)
+(id, category, brand, color, pattern, title, description, price, last_activity)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 ON CONFLICT (id) DO UPDATE
-SET img = $2, title = $3, description = $4;
+SET category=$2, brand=$3, color=$4, pattern=$5, title=$6, description=$7, price=$8, last_activity=$9;
+
+-- name: ListCatalog :many
+SELECT * FROM CATALOG ORDER BY last_activity DESC;
+
+-- name: GetCatalog :one
+SELECT * FROM CATALOG WHERE id=$1;
+
+-- name: SearchCatalog :many
+SELECT * FROM CATALOG WHERE LOWER(title) LIKE '%' || LOWER($1) || '%'
+	OR LOWER(description) LIKE '%' || LOWER($1) || '%'
+	OR LOWER(color) LIKE '%' || LOWER($1) || '%'
+	OR LOWER(category) LIKE '%' || LOWER($1) || '%'
+	OR LOWER(brand) LIKE '%' || LOWER($1) || '%'
+	OR LOWER(pattern) LIKE '%' || LOWER($1) || '%'
+	;
+
+-- name: LogUsage :execresult
+INSERT INTO ACTIVITY(id, c_id, ts) values ($1, $2, $3);
+
+-- name: UpdateLastUsed :execresult
+UPDATE catalog SET last_activity=$1 WHERE id=$2;
+
+-- name: ListUsage :many
+SELECT * FROM ACTIVITY ORDER BY ts DESC;

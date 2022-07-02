@@ -1,0 +1,23 @@
+<html>
+	<head>
+		<script src="https://unpkg.com/htmx.org@1.7.0"></script>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+	</head>
+	<body>
+		<div class="p-5">
+			<div id="header">
+				<marquee hx-get="/component/list" hx-target="#viewport" class="text-red-600 font-bold text-2xl"> Gorgina 💝 </marquee>
+				<button hx-get="/component/putCatalog" hx-target="#viewport" class="p-2 border-1 m-4 bg-green-600 hover:bg-green-500 rounded-lg text-green-100 font-bold">
+				Add
+				</button>
+				<input type="text" name="search" class="border-2 p-2 rounded-lg" placeholder="🔍 Search" hx-target="#viewport" hx-get="/component/list" hx-trigger="input"/>
+			</div>
+
+			<div id="viewport" hx-trigger="load" hx-get="/component/list">
+			Loading...
+			</div>
+
+		</div>
+	</body>
+</html>
