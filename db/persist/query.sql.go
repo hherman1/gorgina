@@ -135,22 +135,21 @@ func (q *Queries) LogUsage(ctx context.Context, arg LogUsageParams) (sql.Result,
 
 const putItem = `-- name: PutItem :execresult
 INSERT INTO catalog
-(id, category, brand, color, pattern, title, description, price, last_activity)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+(id, category, brand, color, pattern, title, description, price)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (id) DO UPDATE
-SET category=$2, brand=$3, color=$4, pattern=$5, title=$6, description=$7, price=$8, last_activity=$9
+SET category=$2, brand=$3, color=$4, pattern=$5, title=$6, description=$7, price=$8
 `
 
 type PutItemParams struct {
-	ID           string
-	Category     sql.NullString
-	Brand        sql.NullString
-	Color        sql.NullString
-	Pattern      sql.NullString
-	Title        sql.NullString
-	Description  sql.NullString
-	Price        sql.NullFloat64
-	LastActivity sql.NullTime
+	ID          string
+	Category    sql.NullString
+	Brand       sql.NullString
+	Color       sql.NullString
+	Pattern     sql.NullString
+	Title       sql.NullString
+	Description sql.NullString
+	Price       sql.NullFloat64
 }
 
 func (q *Queries) PutItem(ctx context.Context, arg PutItemParams) (sql.Result, error) {
@@ -163,7 +162,6 @@ func (q *Queries) PutItem(ctx context.Context, arg PutItemParams) (sql.Result, e
 		arg.Title,
 		arg.Description,
 		arg.Price,
-		arg.LastActivity,
 	)
 }
 

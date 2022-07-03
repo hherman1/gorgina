@@ -1,9 +1,9 @@
 -- name: PutItem :execresult
 INSERT INTO catalog
-(id, category, brand, color, pattern, title, description, price, last_activity)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+(id, category, brand, color, pattern, title, description, price)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (id) DO UPDATE
-SET category=$2, brand=$3, color=$4, pattern=$5, title=$6, description=$7, price=$8, last_activity=$9;
+SET category=$2, brand=$3, color=$4, pattern=$5, title=$6, description=$7, price=$8;
 
 -- name: ListCatalog :many
 SELECT * FROM CATALOG ORDER BY hidden ASC, last_activity DESC NULLS LAST;
