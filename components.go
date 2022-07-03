@@ -83,11 +83,16 @@ const itemTmpl = `
 
 		<button hx-target="#viewport" hx-get="component/putCatalog?id={{.ID}}" class="p-2 text-slate-500 rounded-lg bg-slate-50 hover:bg-slate-100"> Edit </button>
 		{{- if eq (used .LastActivity.Time) false }}
-		<button hx-target="#list-{{.ID}}" hx-get="api/use?id={{.ID}}" class="p-2 rounded-lg text-green-600 bg-green-100 hover:bg-green-200"> Use </button>
+		<button hx-target="#list-{{.ID}}" hx-get="api/use?id={{.ID}}" hx-swap="outerHTML" class="p-2 rounded-lg text-green-600 bg-green-100 hover:bg-green-200"> Use </button>
 		{{- end}}
+		{{- if not .Hidden }}
+		<button hx-target="#viewport" hx-get="api/hide?hidden=true&id={{.ID}}" class="p-2 rounded-lg text-slate-600 bg-slate-50 hover:bg-red-200"> Hide </button>
+		{{- else }}
+		<button hx-target="#viewport" hx-get="api/hide?hidden=false&id={{.ID}}" class="p-2 rounded-lg text-red-100 bg-red-500 hover:bg-red-400"> Unhide </button>
+		{{- end }}
 	</div>`
 
-func loggedCatalogItem(item persist.Catalog) (string, error) {
+func renderCatalogItem(item persist.Catalog) (string, error) {
 	t := template.Must(template.New("item").Funcs(template.FuncMap{
 		"used": itemUsedRecently,
 	}).Parse(itemTmpl))

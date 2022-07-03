@@ -28,6 +28,10 @@ const (
 //go:embed db/schema.sql
 var initDB string
 
+// Migrations to run on startup to repair the DB to expected state, if its an old version.
+//go:embed db/migration.sql
+var migrations string
+
 // All of our HTML pages
 //go:embed web
 var web embed.FS
@@ -66,6 +70,10 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("initialize DB tables: %w", err)
 	}
+	_, err = db.ExecContext(ctx, migrations)
+	if err != nil {
+		return fmt.Errorf("migrate DB: %w", err)
+	}
 	queries = persist.New(db)
 
 	// Setup routes
@@ -73,6 +81,7 @@ func run() error {
 	http.DefaultServeMux.Handle("/api/put", HandlerFuncE(handlePut))
 	http.DefaultServeMux.Handle("/api/use", HandlerFuncE(handleUse))
 	http.DefaultServeMux.Handle("/component/list", HandlerFuncE(handleList))
+	http.DefaultServeMux.Handle("/api/hide", HandlerFuncE(handleHide))
 
 	http.DefaultServeMux.Handle("/data/catalog.csv", HandlerFuncE(handleCatalog))
 	http.DefaultServeMux.Handle("/data/activity.csv", HandlerFuncE(handleActivity))
@@ -181,6 +190,26 @@ func handleList(response http.ResponseWriter, req *http.Request) error {
 	return nil
 }
 
+// e.g api/hide?hidden=false&id={{.ID}}
+func handleHide(response http.ResponseWriter, req *http.Request) error {
+	id := strings.Join(req.URL.Query()["id"], "")
+	toHide := strings.Join(req.URL.Query()["hidden"], "") == "true"
+	err := queries.SetHidden(req.Context(), persist.SetHiddenParams{
+		Hidden: toHide,
+		ID:     id,
+	})
+	if err != nil {
+		return fmt.Errorf("set %v hidden (%v): %w", id, toHide, err)
+	}
+
+	// Render result
+	err = handleList(response, req)
+	if err != nil {
+		return fmt.Errorf("render list: %w", err)
+	}
+	return nil
+}
+
 // Mark an item as used, and render an updated view of it.
 func handleUse(response http.ResponseWriter, req *http.Request) error {
 	cid := strings.Join(req.URL.Query()["id"], "")
@@ -217,7 +246,7 @@ func handleUse(response http.ResponseWriter, req *http.Request) error {
 	}
 
 	// Render result
-	r, err := loggedCatalogItem(c)
+	r, err := renderCatalogItem(c)
 	if err != nil {
 		return fmt.Errorf("render item: %w", err)
 	}

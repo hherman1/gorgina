@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS CATALOG
 	title text,
 	description text,
 	price real,
-	last_activity timestamp
+	last_activity timestamp,
+	hidden boolean NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS ACTIVITY

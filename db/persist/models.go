@@ -23,4 +23,5 @@ type Catalog struct {
 	Description  sql.NullString
 	Price        sql.NullFloat64
 	LastActivity sql.NullTime
+	Hidden       bool
 }

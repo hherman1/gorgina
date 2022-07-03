@@ -10,7 +10,7 @@ import (
 )
 
 const getCatalog = `-- name: GetCatalog :one
-SELECT id, category, brand, color, pattern, title, description, price, last_activity FROM CATALOG WHERE id=$1
+SELECT id, category, brand, color, pattern, title, description, price, last_activity, hidden FROM CATALOG WHERE id=$1
 `
 
 func (q *Queries) GetCatalog(ctx context.Context, id string) (Catalog, error) {
@@ -26,12 +26,13 @@ func (q *Queries) GetCatalog(ctx context.Context, id string) (Catalog, error) {
 		&i.Description,
 		&i.Price,
 		&i.LastActivity,
+		&i.Hidden,
 	)
 	return i, err
 }
 
 const listCatalog = `-- name: ListCatalog :many
-SELECT id, category, brand, color, pattern, title, description, price, last_activity FROM CATALOG ORDER BY last_activity DESC
+SELECT id, category, brand, color, pattern, title, description, price, last_activity, hidden FROM CATALOG ORDER BY hidden ASC, last_activity DESC
 `
 
 func (q *Queries) ListCatalog(ctx context.Context) ([]Catalog, error) {
@@ -53,6 +54,7 @@ func (q *Queries) ListCatalog(ctx context.Context) ([]Catalog, error) {
 			&i.Description,
 			&i.Price,
 			&i.LastActivity,
+			&i.Hidden,
 		); err != nil {
 			return nil, err
 		}
@@ -143,7 +145,7 @@ func (q *Queries) PutItem(ctx context.Context, arg PutItemParams) (sql.Result, e
 }
 
 const searchCatalog = `-- name: SearchCatalog :many
-SELECT id, category, brand, color, pattern, title, description, price, last_activity FROM CATALOG WHERE LOWER(title) LIKE '%' || LOWER($1) || '%'
+SELECT id, category, brand, color, pattern, title, description, price, last_activity, hidden FROM CATALOG WHERE LOWER(title) LIKE '%' || LOWER($1) || '%'
 	OR LOWER(description) LIKE '%' || LOWER($1) || '%'
 	OR LOWER(color) LIKE '%' || LOWER($1) || '%'
 	OR LOWER(category) LIKE '%' || LOWER($1) || '%'
@@ -170,6 +172,7 @@ func (q *Queries) SearchCatalog(ctx context.Context, lower string) ([]Catalog, e
 			&i.Description,
 			&i.Price,
 			&i.LastActivity,
+			&i.Hidden,
 		); err != nil {
 			return nil, err
 		}
@@ -182,6 +185,20 @@ func (q *Queries) SearchCatalog(ctx context.Context, lower string) ([]Catalog, e
 		return nil, err
 	}
 	return items, nil
+}
+
+const setHidden = `-- name: SetHidden :exec
+UPDATE catalog SET hidden=$1 WHERE id=$2
+`
+
+type SetHiddenParams struct {
+	Hidden bool
+	ID     string
+}
+
+func (q *Queries) SetHidden(ctx context.Context, arg SetHiddenParams) error {
+	_, err := q.db.ExecContext(ctx, setHidden, arg.Hidden, arg.ID)
+	return err
 }
 
 const updateLastUsed = `-- name: UpdateLastUsed :execresult
