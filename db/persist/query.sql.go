@@ -32,7 +32,7 @@ func (q *Queries) GetCatalog(ctx context.Context, id string) (Catalog, error) {
 }
 
 const listCatalog = `-- name: ListCatalog :many
-SELECT id, category, brand, color, pattern, title, description, price, last_activity, hidden FROM CATALOG ORDER BY hidden ASC, last_activity DESC
+SELECT id, category, brand, color, pattern, title, description, price, last_activity, hidden FROM CATALOG ORDER BY hidden ASC, last_activity DESC NULLS LAST
 `
 
 func (q *Queries) ListCatalog(ctx context.Context) ([]Catalog, error) {
@@ -151,6 +151,7 @@ SELECT id, category, brand, color, pattern, title, description, price, last_acti
 	OR LOWER(category) LIKE '%' || LOWER($1) || '%'
 	OR LOWER(brand) LIKE '%' || LOWER($1) || '%'
 	OR LOWER(pattern) LIKE '%' || LOWER($1) || '%'
+	ORDER BY hidden ASC, last_activity DESC NULLS LAST
 `
 
 func (q *Queries) SearchCatalog(ctx context.Context, lower string) ([]Catalog, error) {

@@ -6,7 +6,7 @@ ON CONFLICT (id) DO UPDATE
 SET category=$2, brand=$3, color=$4, pattern=$5, title=$6, description=$7, price=$8, last_activity=$9;
 
 -- name: ListCatalog :many
-SELECT * FROM CATALOG ORDER BY hidden ASC, last_activity DESC;
+SELECT * FROM CATALOG ORDER BY hidden ASC, last_activity DESC NULLS LAST;
 
 -- name: GetCatalog :one
 SELECT * FROM CATALOG WHERE id=$1;
@@ -18,6 +18,7 @@ SELECT * FROM CATALOG WHERE LOWER(title) LIKE '%' || LOWER($1) || '%'
 	OR LOWER(category) LIKE '%' || LOWER($1) || '%'
 	OR LOWER(brand) LIKE '%' || LOWER($1) || '%'
 	OR LOWER(pattern) LIKE '%' || LOWER($1) || '%'
+	ORDER BY hidden ASC, last_activity DESC NULLS LAST
 	;
 
 -- name: SetHidden :exec
