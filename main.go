@@ -133,6 +133,7 @@ func handlePut(response http.ResponseWriter, req *http.Request) error {
 	pattern := req.Form["pattern"]
 	priceRaw := strings.Join(req.Form["price"], "")
 	price := sql.NullFloat64{}
+	useNow := strings.Join(req.Form["used"], "")
 	if priceRaw != "" {
 		d, err := strconv.ParseFloat(priceRaw, 32)
 		if err != nil {
@@ -151,9 +152,16 @@ func handlePut(response http.ResponseWriter, req *http.Request) error {
 		Description: ns(description),
 		Price:       price,
 	})
-	fmt.Println("<", id, ">")
 	if err != nil {
 		return fmt.Errorf("saving result: %w", err)
+	}
+
+	// Mark as used, if requested
+	if useNow == "true" {
+		err = addUsage(req.Context(), id)
+		if err != nil {
+			return fmt.Errorf("adding use for %v: %w", id, err)
+		}
 	}
 
 	err = handleList(response, req)
@@ -210,10 +218,9 @@ func handleHide(response http.ResponseWriter, req *http.Request) error {
 	return nil
 }
 
-// Mark an item as used, and render an updated view of it.
-func handleUse(response http.ResponseWriter, req *http.Request) error {
-	cid := strings.Join(req.URL.Query()["id"], "")
-	tx, err := db.BeginTx(req.Context(), nil)
+// Executes a transaction which marks the given catalog item as used.
+func addUsage(ctx context.Context, id string) error {
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("open transaction: %w", err)
 	}
@@ -221,26 +228,39 @@ func handleUse(response http.ResponseWriter, req *http.Request) error {
 
 	queries := queries.WithTx(tx)
 	t := time.Now().UTC()
-	_, err = queries.LogUsage(req.Context(), persist.LogUsageParams{
+	_, err = queries.LogUsage(ctx, persist.LogUsageParams{
 		ID:  uuid.NewString(),
-		CID: cid,
+		CID: id,
 		Ts:  t,
 	})
 	if err != nil {
 		return fmt.Errorf("log usage: %w", err)
 	}
-	_, err = queries.UpdateLastUsed(req.Context(), persist.UpdateLastUsedParams{
+	_, err = queries.UpdateLastUsed(ctx, persist.UpdateLastUsedParams{
 		LastActivity: sql.NullTime{Valid: true, Time: t},
-		ID:           cid,
+		ID:           id,
 	})
 	if err != nil {
 		return fmt.Errorf("update last used: %w", err)
+	}
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+	return nil
+}
+
+// Mark an item as used, and render an updated view of it.
+func handleUse(response http.ResponseWriter, req *http.Request) error {
+	cid := strings.Join(req.URL.Query()["id"], "")
+	err := addUsage(req.Context(), cid)
+	if err != nil {
+		return fmt.Errorf("saving usage: %w", err)
 	}
 	c, err := queries.GetCatalog(req.Context(), cid)
 	if err != nil {
 		return fmt.Errorf("fetch catalog entry: %w", err)
 	}
-	err = tx.Commit()
 	if err != nil {
 		return fmt.Errorf("commit transaction: %w", err)
 	}

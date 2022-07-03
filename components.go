@@ -16,19 +16,20 @@ func putForm(existing persist.Catalog) string {
 <div class="grid place-items-center">
 <form hx-post="api/put" hx-target="#viewport" class="w-96 grid grid-cols-1 place-content-center">
 	<input type="hidden" name="id" value="%v" />
-	<label for="title"> Title </label> <input type="text" name="title" class="border-2 p-2" value="%v"> </input> <br/>
-	<label for="description"> Description </label> <br /> <textarea name="description" class="border-2 p-2" value="%v">%v</textarea><br/>
-	<label for="category"> Category </label> <select name="category" class="border-2 p-2" value="%v">
+	<label for="title"> Title </label> <input type="text" id="title" name="title" class="border-2 p-2" value="%v"> </input> <br/>
+	<label for="description"> Description </label> <br /> <textarea name="description" id="description" class="border-2 p-2" value="%v">%v</textarea><br/>
+	<label for="category"> Category </label> <select name="category" id="category" class="border-2 p-2" value="%v">
 		<option value="tops">Tops</option>
 		<option value="bottoms">Bottoms</option>
 		<option value="dresses">Dresses</option>
 		<option value="accessories">Accessories</option>
 		<option value="shoes">Shoes</option>
 	</select> <br />
-	<label for="brand"> Brand </label> <input type="text" name="brand" class="border-2 p-2" value="%v"/> <br/>
-	<label for="color"> Color </label> <input type="text" name="color" class="border-2 p-2" value="%v"/> <br/>
-	<label for="pattern"> Pattern </label> <input type="text" name="pattern" class="border-2 p-2" value="%v"/> <br/>
-	<label for="price"> Price </label> <input type="text" name="price" class="border-2 p-2" value="%v" placeholder="30.99" /> <br/>
+	<label for="brand"> Brand </label> <input type="text" name="brand" id="brand" class="border-2 p-2" value="%v"/> <br/>
+	<label for="color"> Color </label> <input type="text" name="color" id="color" class="border-2 p-2" value="%v"/> <br/>
+	<label for="pattern"> Pattern </label> <input type="text" name="pattern" id="pattern" class="border-2 p-2" value="%v"/> <br/>
+	<label for="price"> Price </label> <input type="text" name="price" id="price" class="border-2 p-2" value="%v" placeholder="30.99" /> <br/>
+	<div class="border-2 p-2"> <input type="checkbox" name="used" id="used" value="true"/> <label for="used"> Use now </label> </div> <br/>
 	<input type="submit"  class="border-2 p-2 rounded-full text-blue-100 bg-blue-600 hover:bg-blue-500 mb-4 cursor-pointer"/>
 	<button class="border-2 p-2 rounded-full bg-slate-50 hover:bg-slate-100" hx-get="component/list" hx-target="#viewport"> Cancel </button>
 </form>
