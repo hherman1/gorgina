@@ -10,7 +10,7 @@ import (
 )
 
 const getCatalog = `-- name: GetCatalog :one
-SELECT id, category, brand, color, pattern, title, description, price, last_activity, hidden FROM CATALOG WHERE id=$1
+SELECT id, category, brand, color, pattern, title, description, price, last_activity, last_note, hidden FROM CATALOG WHERE id=$1
 `
 
 func (q *Queries) GetCatalog(ctx context.Context, id string) (Catalog, error) {
@@ -26,13 +26,30 @@ func (q *Queries) GetCatalog(ctx context.Context, id string) (Catalog, error) {
 		&i.Description,
 		&i.Price,
 		&i.LastActivity,
+		&i.LastNote,
 		&i.Hidden,
 	)
 	return i, err
 }
 
+const getLastUsage = `-- name: GetLastUsage :one
+SELECT id, c_id, ts, note FROM ACTIVITY WHERE c_id=$1 ORDER BY ts DESC LIMIT 1
+`
+
+func (q *Queries) GetLastUsage(ctx context.Context, cID string) (Activity, error) {
+	row := q.db.QueryRowContext(ctx, getLastUsage, cID)
+	var i Activity
+	err := row.Scan(
+		&i.ID,
+		&i.CID,
+		&i.Ts,
+		&i.Note,
+	)
+	return i, err
+}
+
 const listCatalog = `-- name: ListCatalog :many
-SELECT id, category, brand, color, pattern, title, description, price, last_activity, hidden FROM CATALOG ORDER BY hidden ASC, last_activity DESC NULLS LAST
+SELECT id, category, brand, color, pattern, title, description, price, last_activity, last_note, hidden FROM CATALOG ORDER BY hidden ASC, last_activity DESC NULLS LAST
 `
 
 func (q *Queries) ListCatalog(ctx context.Context) ([]Catalog, error) {
@@ -54,6 +71,7 @@ func (q *Queries) ListCatalog(ctx context.Context) ([]Catalog, error) {
 			&i.Description,
 			&i.Price,
 			&i.LastActivity,
+			&i.LastNote,
 			&i.Hidden,
 		); err != nil {
 			return nil, err
@@ -70,7 +88,7 @@ func (q *Queries) ListCatalog(ctx context.Context) ([]Catalog, error) {
 }
 
 const listUsage = `-- name: ListUsage :many
-SELECT id, c_id, ts FROM ACTIVITY ORDER BY ts DESC
+SELECT id, c_id, ts, note FROM ACTIVITY ORDER BY ts DESC
 `
 
 func (q *Queries) ListUsage(ctx context.Context) ([]Activity, error) {
@@ -82,7 +100,12 @@ func (q *Queries) ListUsage(ctx context.Context) ([]Activity, error) {
 	var items []Activity
 	for rows.Next() {
 		var i Activity
-		if err := rows.Scan(&i.ID, &i.CID, &i.Ts); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.CID,
+			&i.Ts,
+			&i.Note,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -145,7 +168,7 @@ func (q *Queries) PutItem(ctx context.Context, arg PutItemParams) (sql.Result, e
 }
 
 const searchCatalog = `-- name: SearchCatalog :many
-SELECT id, category, brand, color, pattern, title, description, price, last_activity, hidden FROM CATALOG WHERE LOWER(title) LIKE '%' || LOWER($1) || '%'
+SELECT id, category, brand, color, pattern, title, description, price, last_activity, last_note, hidden FROM CATALOG WHERE LOWER(title) LIKE '%' || LOWER($1) || '%'
 	OR LOWER(description) LIKE '%' || LOWER($1) || '%'
 	OR LOWER(color) LIKE '%' || LOWER($1) || '%'
 	OR LOWER(category) LIKE '%' || LOWER($1) || '%'
@@ -173,6 +196,7 @@ func (q *Queries) SearchCatalog(ctx context.Context, lower string) ([]Catalog, e
 			&i.Description,
 			&i.Price,
 			&i.LastActivity,
+			&i.LastNote,
 			&i.Hidden,
 		); err != nil {
 			return nil, err
@@ -200,6 +224,32 @@ type SetHiddenParams struct {
 func (q *Queries) SetHidden(ctx context.Context, arg SetHiddenParams) error {
 	_, err := q.db.ExecContext(ctx, setHidden, arg.Hidden, arg.ID)
 	return err
+}
+
+const setUsageNote = `-- name: SetUsageNote :execresult
+UPDATE activity SET note=$1 WHERE id=$2
+`
+
+type SetUsageNoteParams struct {
+	Note sql.NullString
+	ID   string
+}
+
+func (q *Queries) SetUsageNote(ctx context.Context, arg SetUsageNoteParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, setUsageNote, arg.Note, arg.ID)
+}
+
+const updateLastNote = `-- name: UpdateLastNote :execresult
+UPDATE catalog SET last_note=$1 WHERE id=$2
+`
+
+type UpdateLastNoteParams struct {
+	LastNote sql.NullString
+	ID       string
+}
+
+func (q *Queries) UpdateLastNote(ctx context.Context, arg UpdateLastNoteParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, updateLastNote, arg.LastNote, arg.ID)
 }
 
 const updateLastUsed = `-- name: UpdateLastUsed :execresult

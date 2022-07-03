@@ -8,9 +8,10 @@ import (
 )
 
 type Activity struct {
-	ID  string
-	CID string
-	Ts  time.Time
+	ID   string
+	CID  string
+	Ts   time.Time
+	Note sql.NullString
 }
 
 type Catalog struct {
@@ -23,5 +24,6 @@ type Catalog struct {
 	Description  sql.NullString
 	Price        sql.NullFloat64
 	LastActivity sql.NullTime
+	LastNote     sql.NullString
 	Hidden       bool
 }

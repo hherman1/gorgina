@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS CATALOG
 	description text,
 	price real,
 	last_activity timestamp,
+	last_note text,
 	hidden boolean NOT NULL
 );
 
@@ -16,5 +17,6 @@ CREATE TABLE IF NOT EXISTS ACTIVITY
 (
 	id NCHAR(36) NOT NULL PRIMARY KEY,
 	c_id NCHAR(36) references catalog(id) NOT NULL,
-	ts timestamp NOT NULL
+	ts timestamp NOT NULL,
+	note text
 );

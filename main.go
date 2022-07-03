@@ -80,6 +80,7 @@ func run() error {
 	http.DefaultServeMux.Handle("/component/putCatalog", HandlerFuncE(handlePutComponent))
 	http.DefaultServeMux.Handle("/api/put", HandlerFuncE(handlePut))
 	http.DefaultServeMux.Handle("/api/use", HandlerFuncE(handleUse))
+	http.DefaultServeMux.Handle("/api/use/note", HandlerFuncE(handleUseNote))
 	http.DefaultServeMux.Handle("/component/list", HandlerFuncE(handleList))
 	http.DefaultServeMux.Handle("/api/hide", HandlerFuncE(handleHide))
 
@@ -187,9 +188,6 @@ func handleList(response http.ResponseWriter, req *http.Request) error {
 			return fmt.Errorf("search catalog(%v): %w", search, err)
 		}
 	}
-	for _, c := range cs {
-		fmt.Println("<", c.ID, ">")
-	}
 	r, err := listCatalog(cs)
 	if err != nil {
 		return fmt.Errorf("render catalog: %w", err)
@@ -277,6 +275,50 @@ func handleUse(response http.ResponseWriter, req *http.Request) error {
 	return nil
 }
 
+// Executes a transaction which sets the note of the last usage for the given catalog item.
+func addUsageNote(ctx context.Context, id string, note string) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("open transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	queries := queries.WithTx(tx)
+	a, err := queries.GetLastUsage(ctx, id)
+	if err != nil {
+		return fmt.Errorf("find activity: %w", err)
+	}
+	_, err = queries.SetUsageNote(ctx, persist.SetUsageNoteParams{Note: ns([]string{note}), ID: a.ID})
+	if err != nil {
+		return fmt.Errorf("set usage note: %w", err)
+	}
+	_, err = queries.UpdateLastNote(ctx, persist.UpdateLastNoteParams{LastNote: ns([]string{note}), ID: id})
+	if err != nil {
+		return fmt.Errorf("set usage note: %w", err)
+	}
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+	return nil
+}
+
+// Sets a note on the latest use
+func handleUseNote(response http.ResponseWriter, req *http.Request) error {
+	err := req.ParseForm()
+	if err != nil {
+		return fmt.Errorf("parse form: %w", err)
+	}
+
+	cid := strings.Join(req.URL.Query()["id"], "")
+	note := req.PostFormValue("note")
+	err = addUsageNote(req.Context(), cid, note)
+	if err != nil {
+		return fmt.Errorf("saving usage note: %w", err)
+	}
+	return nil
+}
+
 // Renders all catalog data as a csv
 func handleCatalog(response http.ResponseWriter, req *http.Request) error {
 	cs, err := queries.ListCatalog(req.Context())
@@ -316,14 +358,15 @@ func handleActivity(response http.ResponseWriter, req *http.Request) error {
 		return fmt.Errorf("list activity: %w", err)
 	}
 	w := csv.NewWriter(response)
-	err = w.Write([]string{"id", "cid", "time"})
+	err = w.Write([]string{"id", "cid", "time", "note"})
 	if err != nil {
 		return fmt.Errorf("write header: %w", err)
 	}
 	for _, a := range as {
 		err = w.Write([]string{a.ID,
 			a.CID,
-			strconv.Itoa(int(a.Ts.UnixMilli()))})
+			strconv.Itoa(int(a.Ts.UnixMilli())),
+			a.Note.String})
 		if err != nil {
 			return fmt.Errorf("write row (%v): %w", a, err)
 		}

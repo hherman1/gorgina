@@ -24,11 +24,20 @@ SELECT * FROM CATALOG WHERE LOWER(title) LIKE '%' || LOWER($1) || '%'
 -- name: SetHidden :exec
 UPDATE catalog SET hidden=$1 WHERE id=$2;
 
+-- name: GetLastUsage :one
+SELECT * FROM ACTIVITY WHERE c_id=$1 ORDER BY ts DESC LIMIT 1;
+
 -- name: LogUsage :execresult
 INSERT INTO ACTIVITY(id, c_id, ts) values ($1, $2, $3);
 
+-- name: SetUsageNote :execresult
+UPDATE activity SET note=$1 WHERE id=$2;
+
 -- name: UpdateLastUsed :execresult
 UPDATE catalog SET last_activity=$1 WHERE id=$2;
+
+-- name: UpdateLastNote :execresult
+UPDATE catalog SET last_note=$1 WHERE id=$2;
 
 -- name: ListUsage :many
 SELECT * FROM ACTIVITY ORDER BY ts DESC;

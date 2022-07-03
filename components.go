@@ -91,6 +91,12 @@ const itemTmpl = `
 		{{- else }}
 		<button hx-target="#viewport" hx-get="api/hide?hidden=false&id={{.ID}}" class="p-2 rounded-lg text-red-100 bg-red-500 hover:bg-red-400"> Unhide </button>
 		{{- end }}
+
+		<!-- Allows setting a description on the last use if there was something noteworthy -->
+		{{- if used .LastActivity.Time }}
+		<input type="text" name="note" placeholder="Use notes" class="p-2 mt-2 border-2 rounded-lg" hx-swap="none" hx-post="api/use/note?id={{.ID}}" hx-trigger="input" value="{{.LastNote.String}}" />
+		{{- end}}
+
 	</div>`
 
 func renderCatalogItem(item persist.Catalog) (string, error) {
