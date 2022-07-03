@@ -34,7 +34,7 @@ INSERT INTO ACTIVITY(id, c_id, ts) values ($1, $2, $3);
 UPDATE activity SET note=$1 WHERE id=$2;
 
 -- name: UpdateLastUsed :execresult
-UPDATE catalog SET last_activity=$1 WHERE id=$2;
+UPDATE catalog SET last_activity=$1, last_note=NULL WHERE id=$2;
 
 -- name: UpdateLastNote :execresult
 UPDATE catalog SET last_note=$1 WHERE id=$2;

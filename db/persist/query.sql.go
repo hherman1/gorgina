@@ -251,7 +251,7 @@ func (q *Queries) UpdateLastNote(ctx context.Context, arg UpdateLastNoteParams) 
 }
 
 const updateLastUsed = `-- name: UpdateLastUsed :execresult
-UPDATE catalog SET last_activity=$1 WHERE id=$2
+UPDATE catalog SET last_activity=$1, last_note=NULL WHERE id=$2
 `
 
 type UpdateLastUsedParams struct {
