@@ -73,7 +73,7 @@ const itemTmpl = `
 	<div class="p-3 m-3 max-w-xs" id="list-{{.ID}}">
 		<div>
 			<span {{ if used .LastActivity.Time }}class="decoration-green-500 underline decoration-2"{{end}}> <b>{{.Title.String}}</b> </span>
-			{{if .LastActivity.Valid}}<span class="ml-4 text-slate-400"> {{.LastActivity.Time.Local.Format "3:04PM 01/02/06"}}</span>{{end}}
+			{{if .LastActivity.Valid}}<span class="ml-4 text-slate-400" timestamp="{{.LastActivity.Time.UnixMilli}}"> </span>{{end}}
 		</div>
 		<div class="p-1"> {{.Description.String}} </div>
 		<div class="p-1"> {{.Category.String}} </div>

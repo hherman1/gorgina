@@ -3,6 +3,16 @@
 		<script src="https://unpkg.com/htmx.org@1.7.0"></script>
 		<script src="https://cdn.tailwindcss.com"></script>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<script>
+document.addEventListener('htmx:afterSwap', function(evt) {
+    document.querySelectorAll("[timestamp]").forEach(e => {
+    	let d = new Date(parseInt(e.getAttribute("timestamp")))
+    	e.removeAttribute("timestamp") // prevent rerun
+    	e.innerHTML = d.toLocaleTimeString() + " " + d.toLocaleDateString()
+    });
+});
+		</script>
 	</head>
 	<body>
 		<div class="p-5">
