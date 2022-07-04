@@ -91,7 +91,7 @@ const itemTmpl = `
 			💍
 			{{- else if eq (trim .Category.String) "shoes"}}
 			👠
-			{{- else if eq (trim .Category.String) "shoes"}}
+			{{- else if eq (trim .Category.String) "dresses"}}
 			👗
 			{{- else }}
 			{{.Category.String}}
