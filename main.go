@@ -81,6 +81,8 @@ func run() error {
 	http.DefaultServeMux.Handle("/api/put", HandlerFuncE(handlePut))
 	http.DefaultServeMux.Handle("/api/use", HandlerFuncE(handleUse))
 	http.DefaultServeMux.Handle("/api/use/note", HandlerFuncE(handleUseNote))
+	http.DefaultServeMux.Handle("/api/use/put", HandlerFuncE(handlePutUse))
+	http.DefaultServeMux.Handle("/component/useHistory", HandlerFuncE(handleUseHistoryComponent))
 	http.DefaultServeMux.Handle("/component/list", HandlerFuncE(handleList))
 	http.DefaultServeMux.Handle("/api/hide", HandlerFuncE(handleHide))
 
@@ -110,6 +112,36 @@ func handlePutComponent(response http.ResponseWriter, req *http.Request) error {
 		}
 	}
 	_, err := response.Write([]byte(putForm(c)))
+	if err != nil {
+		return fmt.Errorf("writing response: %w", err)
+	}
+	return nil
+}
+
+// Renders a list of the history of the request catalog item
+func handleUseHistoryComponent(response http.ResponseWriter, req *http.Request) error {
+	id := strings.Join(req.URL.Query()["id"], "")
+	var c persist.Catalog
+
+	// load catalog
+	var err error
+	c, err = queries.GetCatalog(req.Context(), id)
+	if err != nil {
+		return fmt.Errorf("loading catalog entry: %w", err)
+	}
+
+	// load history
+	as, err := queries.GetAllUsage(req.Context(), id)
+	if err != nil {
+		return fmt.Errorf("load history %v: %w", id, err)
+	}
+
+	r, err := renderEditableHistory(c, as)
+	if err != nil {
+		return fmt.Errorf("render history %v: %w", id, err)
+	}
+
+	_, err = response.Write([]byte(r))
 	if err != nil {
 		return fmt.Errorf("writing response: %w", err)
 	}
@@ -248,6 +280,41 @@ func addUsage(ctx context.Context, id string) error {
 	return nil
 }
 
+// Executes a transaction which computes the last usage and refreshes the tags for the catalog item.
+func refreshLastUse(ctx context.Context, id string) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("open transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	queries := queries.WithTx(tx)
+
+	a, err := queries.GetLastUsage(ctx, id)
+	if err != nil {
+		return fmt.Errorf("last usage: %w", err)
+	}
+	_, err = queries.UpdateLastUsed(ctx, persist.UpdateLastUsedParams{
+		LastActivity: sql.NullTime{Valid: true, Time: a.Ts},
+		ID:           id,
+	})
+	if err != nil {
+		return fmt.Errorf("update cataog last usage: %w", err)
+	}
+	_, err = queries.UpdateLastNote(ctx, persist.UpdateLastNoteParams{
+		LastNote: a.Note,
+		ID:       id,
+	})
+	if err != nil {
+		return fmt.Errorf("update cataog last note: %w", err)
+	}
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+	return nil
+}
+
 // Mark an item as used, and render an updated view of it.
 func handleUse(response http.ResponseWriter, req *http.Request) error {
 	cid := strings.Join(req.URL.Query()["id"], "")
@@ -316,6 +383,46 @@ func handleUseNote(response http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return fmt.Errorf("saving usage note: %w", err)
 	}
+	return nil
+}
+
+// Updates arbitrary data on a given usage
+func handlePutUse(response http.ResponseWriter, req *http.Request) error {
+	err := req.ParseForm()
+	if err != nil {
+		return fmt.Errorf("parse form: %w", err)
+	}
+	id := req.PostFormValue("id")
+	t, err := time.Parse("2006-01-02T15:04", req.PostFormValue("time"))
+	if err != nil {
+		return fmt.Errorf("parse time %v: %w", req.PostFormValue("time"), err)
+	}
+	timezoneMs, err := strconv.Atoi(req.PostFormValue("timezoneMs"))
+	if err != nil {
+		return fmt.Errorf("parse tz %v: %w", req.PostFormValue("timezoneMs"), err)
+	}
+	t = t.Add(time.Duration(timezoneMs) * time.Millisecond)
+	note := req.PostFormValue("note")
+
+	_, err = queries.PutUsage(req.Context(), persist.PutUsageParams{
+		Note: ns([]string{note}),
+		Ts:   t,
+		ID:   id,
+	})
+	if err != nil {
+		return fmt.Errorf("put usage: %w", err)
+	}
+
+	// Fix catalog last use
+	a, err := queries.GetUsage(req.Context(), id)
+	if err != nil {
+		return fmt.Errorf("get usage %v: %w", id, err)
+	}
+	err = refreshLastUse(req.Context(), a.CID)
+	if err != nil {
+		return fmt.Errorf("refreshing catalog usage %v: %w", a.CID, err)
+	}
+
 	return nil
 }
 

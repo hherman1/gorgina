@@ -27,11 +27,20 @@ UPDATE catalog SET hidden=$1 WHERE id=$2;
 -- name: GetLastUsage :one
 SELECT * FROM ACTIVITY WHERE c_id=$1 ORDER BY ts DESC LIMIT 1;
 
+-- name: GetAllUsage :many
+SELECT * FROM ACTIVITY WHERE c_id=$1 ORDER BY ts DESC;
+
+-- name: GetUsage :one
+SELECT * FROM ACTIVITY WHERE id=$1;
+
 -- name: LogUsage :execresult
 INSERT INTO ACTIVITY(id, c_id, ts) values ($1, $2, $3);
 
 -- name: SetUsageNote :execresult
 UPDATE activity SET note=$1 WHERE id=$2;
+
+-- name: PutUsage :execresult
+UPDATE activity SET note=$1, ts=$2 WHERE id=$3;
 
 -- name: UpdateLastUsed :execresult
 UPDATE catalog SET last_activity=$1, last_note=NULL WHERE id=$2;

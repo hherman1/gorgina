@@ -9,6 +9,38 @@ import (
 	"time"
 )
 
+const getAllUsage = `-- name: GetAllUsage :many
+SELECT id, c_id, ts, note FROM ACTIVITY WHERE c_id=$1 ORDER BY ts DESC
+`
+
+func (q *Queries) GetAllUsage(ctx context.Context, cID string) ([]Activity, error) {
+	rows, err := q.db.QueryContext(ctx, getAllUsage, cID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Activity
+	for rows.Next() {
+		var i Activity
+		if err := rows.Scan(
+			&i.ID,
+			&i.CID,
+			&i.Ts,
+			&i.Note,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCatalog = `-- name: GetCatalog :one
 SELECT id, category, brand, color, pattern, title, description, price, last_activity, last_note, hidden FROM CATALOG WHERE id=$1
 `
@@ -38,6 +70,22 @@ SELECT id, c_id, ts, note FROM ACTIVITY WHERE c_id=$1 ORDER BY ts DESC LIMIT 1
 
 func (q *Queries) GetLastUsage(ctx context.Context, cID string) (Activity, error) {
 	row := q.db.QueryRowContext(ctx, getLastUsage, cID)
+	var i Activity
+	err := row.Scan(
+		&i.ID,
+		&i.CID,
+		&i.Ts,
+		&i.Note,
+	)
+	return i, err
+}
+
+const getUsage = `-- name: GetUsage :one
+SELECT id, c_id, ts, note FROM ACTIVITY WHERE id=$1
+`
+
+func (q *Queries) GetUsage(ctx context.Context, id string) (Activity, error) {
+	row := q.db.QueryRowContext(ctx, getUsage, id)
 	var i Activity
 	err := row.Scan(
 		&i.ID,
@@ -163,6 +211,20 @@ func (q *Queries) PutItem(ctx context.Context, arg PutItemParams) (sql.Result, e
 		arg.Description,
 		arg.Price,
 	)
+}
+
+const putUsage = `-- name: PutUsage :execresult
+UPDATE activity SET note=$1, ts=$2 WHERE id=$3
+`
+
+type PutUsageParams struct {
+	Note sql.NullString
+	Ts   time.Time
+	ID   string
+}
+
+func (q *Queries) PutUsage(ctx context.Context, arg PutUsageParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, putUsage, arg.Note, arg.Ts, arg.ID)
 }
 
 const searchCatalog = `-- name: SearchCatalog :many

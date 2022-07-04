@@ -73,7 +73,8 @@ const itemTmpl = `
 	<div class="p-3 m-3 max-w-xs" id="list-{{.ID}}">
 		<div>
 			<span {{ if used .LastActivity.Time }}class="decoration-green-500 underline decoration-2"{{end}}> <b>{{.Title.String}}</b> </span>
-			{{if .LastActivity.Valid}}<span class="ml-4 text-slate-400" timestamp="{{.LastActivity.Time.UnixMilli}}"> </span>{{end}}
+			{{if .LastActivity.Valid}}<span class="ml-4 text-slate-400" timestamp="{{.LastActivity.Time.UnixMilli}}"> </span>
+				<span hx-target="#viewport" hx-get="component/useHistory?id={{.ID}}" class="cursor-pointer border-2 p-1 rounded-lg hover:bg-slate-50"> ⏱ </span> {{end}}
 		</div>
 		<div class="p-1"> {{.Description.String}} </div>
 		<div class="p-1"> {{.Category.String}} </div>
@@ -105,6 +106,42 @@ func renderCatalogItem(item persist.Catalog) (string, error) {
 	}).Parse(itemTmpl))
 	var bs bytes.Buffer
 	err := t.Execute(&bs, item)
+	if err != nil {
+		return "", fmt.Errorf("execute tmpl: %w", err)
+	}
+	return bs.String(), nil
+}
+
+func renderEditableHistory(item persist.Catalog, history []persist.Activity) (string, error) {
+	dot := struct {
+		Item    persist.Catalog
+		History []persist.Activity
+	}{item, history}
+	const tmpl = `
+<div class="p-4">
+	<h2 class="font-bold text-lg"> {{.Item.Title.String}} </h2>
+	<table>
+		<tr> <th class="p-2"> Time </th> <th class="p-2"> Note </th> </tr>
+		{{- range .History }}
+		<tr>
+			<form id="form-{{.ID}}" hx-swap="none" hx-post="api/putUse" hx-trigger="input"/> </form>
+			<input type="hidden" name="id" value="{{.ID}}" form="form-{{.ID}}"/>
+			<input type="hidden" name="timezoneMs" form="form-{{.ID}}"/>
+			<td class="p-2"> <input type="datetime-local" timestamp="{{.Ts.UnixMilli}}" hx-swap="none" hx-post="api/use/put" hx-trigger="input" name="time" form="form-{{.ID}}" hx-include="[form=form-{{.ID}}]"/> </td>
+			<td class="p-2"> <input type="text" hx-swap="none" hx-post="api/use/put" hx-trigger="input" name="note" form="form-{{.ID}}" hx-include="[form=form-{{.ID}}]" value="{{.Note.String}}" class="p-2"/> </td>
+		</tr>
+		{{- end}}
+	</div>
+</div>
+<script type="text/javascript">
+document.querySelectorAll("[name=timezoneMs]").forEach(el => {
+	el.value = new Date().getTimezoneOffset() * 60 * 1000
+})
+</script>
+`
+	t := template.Must(template.New("history").Parse(tmpl))
+	var bs bytes.Buffer
+	err := t.Execute(&bs, dot)
 	if err != nil {
 		return "", fmt.Errorf("execute tmpl: %w", err)
 	}
