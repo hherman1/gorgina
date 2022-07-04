@@ -82,7 +82,7 @@ const itemTmpl = `
 		{{end}}
 		<div class="p-1"> {{.Description.String}} </div>
 		<div class="p-1 italic">
-			<span class="not-italic" style="  color: transparent; text-shadow: 0 0 0 grey;">
+			<span class="not-italic">
 			{{- if eq (trim .Category.String) "bottoms" }}
 			👖
 			{{- else if eq (trim .Category.String) "tops" }}
