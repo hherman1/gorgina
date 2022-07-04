@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/hherman1/gorgina/db/persist"
@@ -56,6 +57,7 @@ func listCatalog(items []persist.Catalog) (string, error) {
 	t := template.Must(template.New("catalog").Parse(tmpl))
 	template.Must(t.New("item").Funcs(template.FuncMap{
 		"used": itemUsedRecently,
+		"trim": strings.TrimSpace,
 	}).Parse(itemTmpl))
 	var bs bytes.Buffer
 	err := t.Execute(&bs, items)
@@ -80,7 +82,23 @@ const itemTmpl = `
 		{{end}}
 		<div class="p-1"> {{.Description.String}} </div>
 		<div class="p-1 italic">
-			<span class="italic"> {{.Category.String}} </span>   ⸱ {{.Brand.String}} ⸱ {{.Color.String}} ⸱ {{.Pattern.String}}
+			<span class="not-italic" style="  color: transparent; text-shadow: 0 0 0 grey;">
+			{{- if eq (trim .Category.String) "bottoms" }}
+			👖
+			{{- else if eq (trim .Category.String) "tops" }}
+			👚
+			{{- else if eq (trim .Category.String) "accessories"}}
+			💍
+			{{- else if eq (trim .Category.String) "shoes"}}
+			👠
+			{{- else if eq (trim .Category.String) "shoes"}}
+			👗
+			{{- else }}
+			{{.Category.String}}
+			{{- end}}
+			</span>
+
+			 ⸱ {{.Brand.String}} ⸱ {{.Color.String}} ⸱ {{.Pattern.String}}
 		</div>
 		<div class="p-1 text-green-800"> ${{printf "%.2f" .Price.Float64}} </div>
 
@@ -104,6 +122,7 @@ const itemTmpl = `
 func renderCatalogItem(item persist.Catalog) (string, error) {
 	t := template.Must(template.New("item").Funcs(template.FuncMap{
 		"used": itemUsedRecently,
+		"trim": strings.TrimSpace,
 	}).Parse(itemTmpl))
 	var bs bytes.Buffer
 	err := t.Execute(&bs, item)
