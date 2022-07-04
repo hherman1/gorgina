@@ -71,16 +71,17 @@ func itemUsedRecently(t time.Time) bool {
 
 const itemTmpl = `
 	<div class="p-3 m-3 max-w-xs" id="list-{{.ID}}">
-		<div>
-			<span {{ if used .LastActivity.Time }}class="decoration-green-500 underline decoration-2"{{end}}> <b>{{.Title.String}}</b> </span>
-			{{if .LastActivity.Valid}}<span class="ml-4 text-slate-400" timestamp="{{.LastActivity.Time.UnixMilli}}"> </span>
-				<span hx-target="#viewport" hx-get="component/useHistory?id={{.ID}}" class="cursor-pointer border-2 p-1 rounded-lg hover:bg-slate-50"> ⏱ </span> {{end}}
+		<div class="text-lg {{ if used .LastActivity.Time }}decoration-green-500 underline decoration-2{{end}}"> <b>{{.Title.String}}</b> </div>
+		{{if .LastActivity.Valid}}
+		<div class="text-sm p-1">
+			<span class="italic text-slate-400" timestamp="{{.LastActivity.Time.UnixMilli}}"> </span>
+			<span hx-target="#viewport" hx-get="component/useHistory?id={{.ID}}" class="cursor-pointer bg-slate-100 p-1 rounded-lg hover:bg-slate-50">⏱</span>
 		</div>
+		{{end}}
 		<div class="p-1"> {{.Description.String}} </div>
-		<div class="p-1"> {{.Category.String}} </div>
-		<div class="p-1"> {{.Brand.String}} </div>
-		<div class="p-1"> {{.Color.String}} </div>
-		<div class="p-1"> {{.Pattern.String}} </div>
+		<div class="p-1 italic">
+			<span class="italic"> {{.Category.String}} </span>   ⸱ {{.Brand.String}} ⸱ {{.Color.String}} ⸱ {{.Pattern.String}}
+		</div>
 		<div class="p-1 text-green-800"> ${{printf "%.2f" .Price.Float64}} </div>
 
 		<button hx-target="#viewport" hx-get="component/putCatalog?id={{.ID}}" class="p-2 text-slate-500 rounded-lg bg-slate-50 hover:bg-slate-100"> Edit </button>
