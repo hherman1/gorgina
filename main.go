@@ -111,7 +111,11 @@ func handlePutComponent(response http.ResponseWriter, req *http.Request) error {
 			return fmt.Errorf("loading catalog entry: %w", err)
 		}
 	}
-	_, err := response.Write([]byte(putForm(c)))
+	r, err := putForm(c)
+	if err != nil {
+		return fmt.Errorf("render add form: %w", err)
+	}
+	_, err = response.Write([]byte(r))
 	if err != nil {
 		return fmt.Errorf("writing response: %w", err)
 	}
