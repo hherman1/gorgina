@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS CATALOG
 	price real,
 	last_activity timestamp,
 	last_note text,
-	hidden boolean NOT NULL
+	hidden boolean NOT NULL DEFAULT false
 );
 
 CREATE TABLE IF NOT EXISTS ACTIVITY
